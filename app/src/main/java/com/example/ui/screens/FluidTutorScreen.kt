@@ -28,10 +28,14 @@ import androidx.compose.ui.unit.sp
 import com.example.data.local.StudyFluidRepository
 import com.example.data.model.ChatMessage
 import com.example.data.model.MessageSender
+import com.example.data.model.TutorLanguageTone
 import com.example.data.remote.GeminiService
 import com.example.ui.components.CameraScannerSheet
+import com.example.ui.components.CbseExamSimulatorSheet
 import com.example.ui.components.GlassCard
+import com.example.ui.components.HandwrittenNotesConverterSheet
 import com.example.ui.components.HapticHelper
+import com.example.ui.components.VoiceStudyBuddySheet
 import com.example.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -51,6 +55,11 @@ fun FluidTutorScreen(
     var isThinking by remember { mutableStateOf(false) }
     var attachedDiagram by remember { mutableStateOf<String?>(null) }
     var showCameraScanner by remember { mutableStateOf(false) }
+    var showVoiceBuddy by remember { mutableStateOf(false) }
+    var showNotesConverter by remember { mutableStateOf(false) }
+    var showExamSimulator by remember { mutableStateOf(false) }
+
+    val currentTone by repository.activeTutorTone.collectAsState()
 
     val listState = rememberLazyListState()
 
@@ -90,7 +99,8 @@ fun FluidTutorScreen(
             val response = GeminiService.askFluidTutor(
                 studentQuery = textToSend,
                 studentName = activeProfile.name,
-                cbseClass = activeProfile.cbseClass
+                cbseClass = activeProfile.cbseClass,
+                tone = currentTone
             )
 
             val tutorMsg = ChatMessage(
@@ -165,8 +175,65 @@ fun FluidTutorScreen(
                     }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Camera Doubt Scanner Button
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Voice Study Buddy (Feature 2)
+                    IconButton(
+                        onClick = {
+                            HapticHelper.triggerImpact(haptic)
+                            showVoiceBuddy = true
+                        },
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(LiquidGlowIndigo.copy(alpha = 0.25f))
+                            .testTag("btn_top_voice_buddy")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Mic,
+                            contentDescription = "Voice Study Buddy",
+                            tint = LiquidGlowCyan
+                        )
+                    }
+
+                    // Notes-to-Flashcards OCR (Feature 3)
+                    IconButton(
+                        onClick = {
+                            HapticHelper.triggerImpact(haptic)
+                            showNotesConverter = true
+                        },
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(LiquidGlowPink.copy(alpha = 0.25f))
+                            .testTag("btn_top_notes_ocr")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.EditNote,
+                            contentDescription = "Notes OCR",
+                            tint = LiquidGlowPink
+                        )
+                    }
+
+                    // CBSE Exam Simulator (Feature 5)
+                    IconButton(
+                        onClick = {
+                            HapticHelper.triggerImpact(haptic)
+                            showExamSimulator = true
+                        },
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(LiquidGlowEmerald.copy(alpha = 0.25f))
+                            .testTag("btn_top_exam_simulator")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FactCheck,
+                            contentDescription = "Exam Simulator",
+                            tint = LiquidGlowEmerald
+                        )
+                    }
+
+                    // Camera Doubt Scanner
                     IconButton(
                         onClick = {
                             HapticHelper.triggerImpact(haptic)
@@ -195,6 +262,43 @@ fun FluidTutorScreen(
                             contentDescription = "Clear Chat",
                             tint = TextMuted
                         )
+                    }
+                }
+            }
+
+            // --- FEATURE 6: MULTI-LANGUAGE REGIONAL SUPPORT & TONE PILLS ---
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                TutorLanguageTone.entries.forEach { toneOption ->
+                    val isSelected = toneOption == currentTone
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isSelected) LiquidGlowIndigo.copy(alpha = 0.35f) else LiquidSurfaceGlass)
+                            .border(1.dp, if (isSelected) LiquidGlowCyan else LiquidCardBorder, RoundedCornerShape(10.dp))
+                            .clickable {
+                                HapticHelper.triggerSelection(haptic)
+                                repository.setTutorTone(toneOption)
+                            }
+                            .padding(vertical = 6.dp, horizontal = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = toneOption.emoji, fontSize = 12.sp)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = toneOption.title.substringBefore(" "),
+                                fontSize = 10.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) LiquidGlowCyan else TextSecondary,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
             }
@@ -374,6 +478,32 @@ fun FluidTutorScreen(
                     sendMessage(followUpQuery)
                 },
                 onDismiss = { showCameraScanner = false }
+            )
+        }
+
+        // Feature 2: Voice Study Buddy (Gemini Live Ambient Audio)
+        if (showVoiceBuddy) {
+            VoiceStudyBuddySheet(
+                repository = repository,
+                chapterTitle = "Chemical Reactions & Equations",
+                onDismiss = { showVoiceBuddy = false }
+            )
+        }
+
+        // Feature 3: Smart Handwritten Notes-to-Flashcards Converter
+        if (showNotesConverter) {
+            HandwrittenNotesConverterSheet(
+                repository = repository,
+                defaultSubject = "Chemistry",
+                onDismiss = { showNotesConverter = false }
+            )
+        }
+
+        // Feature 5: CBSE Exam Board Paper Simulator & Hall Timer
+        if (showExamSimulator) {
+            CbseExamSimulatorSheet(
+                repository = repository,
+                onDismiss = { showExamSimulator = false }
             )
         }
     }

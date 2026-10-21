@@ -371,6 +371,29 @@ fun ProfileScreen(
                 }
             }
         }
+
+        item {
+            Button(
+                onClick = {
+                    HapticHelper.triggerImpact(haptic)
+                    repository.signOutStudent()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .testTag("btn_profile_signout"),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = LiquidSurfaceElevated,
+                    contentColor = LiquidGlowRose
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, LiquidGlowRose.copy(alpha = 0.4f))
+            ) {
+                Icon(imageVector = Icons.Default.ExitToApp, contentDescription = "Log Out", modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Sign Out of Student Account", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }
 

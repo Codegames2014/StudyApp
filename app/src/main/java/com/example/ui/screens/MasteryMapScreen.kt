@@ -25,10 +25,12 @@ import androidx.compose.ui.unit.sp
 import com.example.data.local.StudyFluidRepository
 import com.example.data.model.CosmeticTheme
 import com.example.data.model.SkillNode
+import com.example.ui.components.CbseExamSimulatorSheet
 import com.example.ui.components.CelebrationOverlay
 import com.example.ui.components.ConfettiCanvas
 import com.example.ui.components.GlassCard
 import com.example.ui.components.HapticHelper
+import com.example.ui.components.MistakeVaultSheet
 import com.example.ui.components.XPMeter
 import com.example.ui.theme.*
 
@@ -45,6 +47,8 @@ fun MasteryMapScreen(
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var showConfetti by remember { mutableStateOf(false) }
+    var showMistakeVault by remember { mutableStateOf(false) }
+    var showExamSimulator by remember { mutableStateOf(false) }
 
     // Calculate overall mastery metrics
     val masteredCount = skillNodes.count { it.isMastered }
@@ -153,6 +157,46 @@ fun MasteryMapScreen(
                                 fontWeight = FontWeight.SemiBold,
                                 color = TextPrimary
                             )
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Quick Action Row for Weakness Radar & CBSE Mock Hall
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    HapticHelper.triggerImpact(haptic)
+                                    showMistakeVault = true
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(42.dp)
+                                    .testTag("btn_mastery_mistake_vault"),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = LiquidGlowRose.copy(alpha = 0.25f)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, LiquidGlowRose.copy(alpha = 0.5f))
+                            ) {
+                                Text("🎯 Mistake Radar", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = LiquidGlowRose)
+                            }
+
+                            Button(
+                                onClick = {
+                                    HapticHelper.triggerImpact(haptic)
+                                    showExamSimulator = true
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(42.dp)
+                                    .testTag("btn_mastery_exam_hall"),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = LiquidGlowEmerald.copy(alpha = 0.25f)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, LiquidGlowEmerald.copy(alpha = 0.5f))
+                            ) {
+                                Text("🏛️ Board Exam Mock", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = LiquidGlowEmerald)
+                            }
                         }
                     }
                 }
@@ -294,6 +338,20 @@ fun MasteryMapScreen(
                     Text("Done", color = LiquidGlowCyan)
                 }
             }
+        )
+    }
+
+    if (showMistakeVault) {
+        MistakeVaultSheet(
+            repository = repository,
+            onDismiss = { showMistakeVault = false }
+        )
+    }
+
+    if (showExamSimulator) {
+        CbseExamSimulatorSheet(
+            repository = repository,
+            onDismiss = { showExamSimulator = false }
         )
     }
 }

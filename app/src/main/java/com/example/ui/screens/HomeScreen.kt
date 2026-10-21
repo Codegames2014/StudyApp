@@ -32,6 +32,8 @@ import com.example.data.model.StudentProfile
 import com.example.ui.components.GlassCard
 import com.example.ui.components.HapticHelper
 import com.example.ui.components.LiquidWaveHeader
+import com.example.data.local.StudyFluidRepository
+import com.example.ui.components.FluidThemeSelectorCard
 import com.example.ui.components.XPMeter
 import com.example.ui.theme.*
 
@@ -44,7 +46,8 @@ fun HomeScreen(
     onNavigateToTutor: () -> Unit,
     onNavigateToVault: () -> Unit,
     onNavigateToMastery: (() -> Unit)? = null,
-    onNavigateToPlanner: (() -> Unit)? = null
+    onNavigateToPlanner: (() -> Unit)? = null,
+    repository: StudyFluidRepository? = null
 ) {
     val haptic = LocalHapticFeedback.current
     val chapters = NcertDatabase.getAllChaptersForClass(profile.cbseClass).ifEmpty {
@@ -188,6 +191,13 @@ fun HomeScreen(
                             onClick = onNavigateToMastery
                         )
                     }
+                }
+            }
+
+            // --- FLUID THEME ENGINE SELECTOR ---
+            if (repository != null) {
+                item {
+                    FluidThemeSelectorCard(repository = repository)
                 }
             }
 

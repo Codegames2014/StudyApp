@@ -139,7 +139,8 @@ fun MainNavigation(repository: StudyFluidRepository) {
                         onNavigateToTutor = { currentDestination = AppDestination.TUTOR },
                         onNavigateToVault = { currentDestination = AppDestination.VAULT },
                         onNavigateToMastery = { currentDestination = AppDestination.MASTERY },
-                        onNavigateToPlanner = { currentDestination = AppDestination.PLANNER }
+                        onNavigateToPlanner = { currentDestination = AppDestination.PLANNER },
+                        repository = repository
                     )
 
                     AppDestination.MASTERY -> MasteryMapScreen(

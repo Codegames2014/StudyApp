@@ -128,4 +128,39 @@ class ExampleRobolectricTest {
         assertEquals(secondTitle, reordered[0].title)
         assertEquals(firstTitle, reordered[1].title)
     }
+
+    @Test
+    fun `verify student email and password authentication flow`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val repo = StudyFluidRepository(context)
+
+        // Invalid password test
+        val failResult = repo.authenticateWithEmailPassword("aarav.sharma24@gmail.com", "wrongpass")
+        assertTrue(failResult.isFailure)
+
+        // Valid password test
+        val successResult = repo.authenticateWithEmailPassword("aarav.sharma24@gmail.com", "study123")
+        assertTrue(successResult.isSuccess)
+        assertTrue(repo.isAuthenticated.value)
+        assertEquals("Aarav Sharma", repo.activeProfile.name)
+
+        // Register new sibling
+        val newSibling = repo.registerStudentWithEmailPassword(
+            name = "Rohan Sharma",
+            email = "rohan.sharma@gmail.com",
+            pass = "rohan2026",
+            cbseClass = 9,
+            stream = "General",
+            schoolName = "DPS RK Puram",
+            avatarEmoji = "🔬",
+            colorHex = 0xFF10B981
+        )
+        assertTrue(newSibling.isSuccess)
+        assertEquals("Rohan Sharma", repo.activeProfile.name)
+        assertEquals(9, repo.activeProfile.cbseClass)
+
+        // Sign out
+        repo.signOutStudent()
+        assertFalse(repo.isAuthenticated.value)
+    }
 }

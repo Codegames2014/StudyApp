@@ -12,7 +12,9 @@ data class StudentProfile(
     val studyStreakDays: Int = 1,
     val knowledgePoints: Int = 120,
     val bookmarkedChapterIds: Set<String> = emptySet(),
-    val isGoogleLinked: Boolean = true
+    val isGoogleLinked: Boolean = true,
+    val password: String = "study123",
+    val firebaseUid: String? = null
 ) {
     val displayClass: String
         get() = "CBSE Class $cbseClass" + if (cbseClass >= 11 && stream.isNotBlank()) " • $stream" else ""

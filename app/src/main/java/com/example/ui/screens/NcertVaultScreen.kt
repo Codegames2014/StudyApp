@@ -26,10 +26,13 @@ import androidx.compose.ui.unit.sp
 import com.example.data.local.NcertDatabase
 import com.example.data.local.StudyFluidRepository
 import com.example.data.model.NcertChapter
+import com.example.ui.components.CbseExamSimulatorSheet
 import com.example.ui.components.GlassCard
 import com.example.ui.components.HapticHelper
+import com.example.ui.components.MistakeVaultSheet
 import com.example.ui.components.OfflineConnectionState
 import com.example.ui.components.OfflineStatusBadge
+import com.example.ui.components.RoomVaultsSection
 import com.example.ui.theme.*
 
 @Composable
@@ -44,6 +47,9 @@ fun NcertVaultScreen(
     var selectedSubjectId by remember { mutableStateOf<String?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     var showOnlyOffline by remember { mutableStateOf(false) }
+    var selectedVaultTab by remember { mutableIntStateOf(0) } // 0 = NCERT Textbooks, 1 = Room Custom Vaults, 2 = Mistake Vault
+    var showMistakeVaultSheet by remember { mutableStateOf(false) }
+    var showExamSimulatorSheet by remember { mutableStateOf(false) }
 
     val cachedChapterIds by repository.cachedChapterIds.collectAsState()
     val downloadProgressMap by repository.downloadProgress.collectAsState()
@@ -77,28 +83,127 @@ fun NcertVaultScreen(
         ) {
             Column {
                 Text(
-                    text = "Official NCERT Vault",
+                    text = if (selectedVaultTab == 0) "Official NCERT Vault" else "My Custom Room Vaults",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
                 )
                 Text(
-                    text = "Offline-first local RAG & textbook downloads",
+                    text = if (selectedVaultTab == 0) "Offline-first local RAG & textbook downloads" else "Room SQLite persistent study categories",
                     fontSize = 12.sp,
                     color = TextSecondary
                 )
             }
 
-            // Fluid Morphing OfflineStatusBadge
-            OfflineStatusBadge(
-                state = if (showOnlyOffline) OfflineConnectionState.OFFLINE_CACHED else OfflineConnectionState.ONLINE_CLOUD,
-                onToggle = {
-                    showOnlyOffline = !showOnlyOffline
+            if (selectedVaultTab == 0) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = {
+                            HapticHelper.triggerImpact(haptic)
+                            showExamSimulatorSheet = true
+                        },
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(LiquidGlowEmerald.copy(alpha = 0.2f))
+                            .testTag("btn_vault_exam_simulator")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FactCheck,
+                            contentDescription = "CBSE Exam Hall Simulator",
+                            tint = LiquidGlowEmerald
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    // Fluid Morphing OfflineStatusBadge
+                    OfflineStatusBadge(
+                        state = if (showOnlyOffline) OfflineConnectionState.OFFLINE_CACHED else OfflineConnectionState.ONLINE_CLOUD,
+                        onToggle = {
+                            showOnlyOffline = !showOnlyOffline
+                        }
+                    )
                 }
-            )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Tab Switcher (NCERT vs Room Vaults vs Mistake Vault)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(LiquidSurfaceElevated)
+                .padding(4.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (selectedVaultTab == 0) LiquidGlowIndigo else Color.Transparent)
+                    .clickable {
+                        HapticHelper.triggerSelection(haptic)
+                        selectedVaultTab = 0
+                    }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "NCERT",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selectedVaultTab == 0) Color.White else TextMuted
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (selectedVaultTab == 1) LiquidGlowCyan else Color.Transparent)
+                    .clickable {
+                        HapticHelper.triggerSelection(haptic)
+                        selectedVaultTab = 1
+                    }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Room Vaults",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selectedVaultTab == 1) Color.Black else TextMuted
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1.1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (selectedVaultTab == 2) LiquidGlowRose else Color.Transparent)
+                    .clickable {
+                        HapticHelper.triggerSelection(haptic)
+                        selectedVaultTab = 2
+                        showMistakeVaultSheet = true
+                    }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "🎯 Mistake Vault",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selectedVaultTab == 2) Color.White else TextMuted
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(14.dp))
+
+        if (selectedVaultTab == 1) {
+            RoomVaultsSection(repository = repository)
+        } else {
 
         // Search Bar
         OutlinedTextField(
@@ -220,6 +325,21 @@ fun NcertVaultScreen(
                     onOpenNotebookLm = { onNavigateToChapterNotebook(chapter.id) }
                 )
             }
+        }
+        }
+
+        if (showMistakeVaultSheet) {
+            MistakeVaultSheet(
+                repository = repository,
+                onDismiss = { showMistakeVaultSheet = false }
+            )
+        }
+
+        if (showExamSimulatorSheet) {
+            CbseExamSimulatorSheet(
+                repository = repository,
+                onDismiss = { showExamSimulatorSheet = false }
+            )
         }
     }
 }

@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.local.NcertDatabase
 import com.example.data.local.StudyFluidRepository
 import com.example.data.model.*
+import com.example.ui.components.Ar3dViewerSheet
 import com.example.ui.components.CameraScannerSheet
 import com.example.ui.components.CelebrationOverlay
 import com.example.ui.components.GlassCard
@@ -65,6 +66,7 @@ fun NotebookLmScreen(
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("Audio Overview", "Grounded RAG", "Study Guide", "Study Aids", "Notes")
     var showCameraScanner by remember { mutableStateOf(false) }
+    var showAr3dViewer by remember { mutableStateOf(false) }
     var showCelebration by remember { mutableStateOf(false) }
     var celebrationTitle by remember { mutableStateOf("Chapter Mastered!") }
     var celebrationSubtitle by remember { mutableStateOf("Knowledge XP Awarded ⚡") }
@@ -202,6 +204,24 @@ fun NotebookLmScreen(
 
             Spacer(modifier = Modifier.width(4.dp))
 
+            // FEATURE 1: Interactive AR 3D Science Models
+            IconButton(
+                onClick = {
+                    HapticHelper.triggerImpact(haptic)
+                    showAr3dViewer = true
+                },
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(LiquidGlowIndigo.copy(alpha = 0.25f))
+                    .testTag("btn_chapter_ar_3d")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ViewInAr,
+                    contentDescription = "Interactive 3D AR Model",
+                    tint = LiquidGlowCyan
+                )
+            }
+
             // Camera Doubt Scanner icon in NotebookLM
             IconButton(
                 onClick = {
@@ -329,6 +349,18 @@ fun NotebookLmScreen(
                     repository.addNote(chapter.id, title, solution, citation)
                 },
                 onDismiss = { showCameraScanner = false }
+            )
+        }
+
+        // FEATURE 1: Interactive AR 3D Science Model Viewer Sheet
+        if (showAr3dViewer) {
+            val arModel = remember(chapter.id) {
+                com.example.data.model.ArModelRegistry.getModelForChapter(chapter.id)
+            }
+            Ar3dViewerSheet(
+                initialModel = arModel,
+                chapterTitle = chapter.title,
+                onDismiss = { showAr3dViewer = false }
             )
         }
 
