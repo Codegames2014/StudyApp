@@ -163,4 +163,40 @@ class ExampleRobolectricTest {
         repo.signOutStudent()
         assertFalse(repo.isAuthenticated.value)
     }
+
+    @Test
+    fun `verify mistake vault and weakness radar calculations`() = kotlinx.coroutines.test.runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val repo = StudyFluidRepository(context)
+
+        val mistake = repo.recordMistake(
+            chapterId = "cl10_sci_ch1",
+            subject = "Chemistry",
+            topic = "Oxidation and Reduction",
+            questionText = "What is the reducing agent in CuO + H2 -> Cu + H2O?",
+            studentAnswer = "CuO",
+            correctAnswer = "H2",
+            explanation = "H2 gains oxygen and gets oxidized, making it the reducing agent.",
+            mistakeCategory = "Conceptual Gap",
+            ncertCitation = "NCERT Cl.10 Sci, Ch.1, p.12"
+        )
+
+        assertNotNull(mistake.id)
+        assertFalse(mistake.isMastered)
+        assertEquals("Chemistry", mistake.subject)
+        assertEquals(mistake.chapterId, mistake.chapter)
+        assertEquals(1, mistake.errorCount)
+
+        // Increment error count
+        repo.incrementMistakeError(mistake.id)
+        val afterIncrement = repo.mistakeDao.getMistakeById(mistake.id)
+        assertNotNull(afterIncrement)
+        assertEquals(2, afterIncrement!!.errorCount)
+
+        // Heal the mistake
+        repo.healMistake(mistake.id)
+        val fetched = repo.mistakeDao.getMistakeById(mistake.id)
+        assertNotNull(fetched)
+        assertTrue(fetched!!.isMastered)
+    }
 }

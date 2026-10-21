@@ -14,7 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +32,8 @@ import com.example.data.model.StudentProfile
 import com.example.ui.components.GlassCard
 import com.example.ui.components.HapticHelper
 import com.example.ui.components.LiquidWaveHeader
+import com.example.ui.components.MistakeVaultSheet
+import com.example.ui.components.WeaknessRadarChart
 import com.example.data.local.StudyFluidRepository
 import com.example.ui.components.FluidThemeSelectorCard
 import com.example.ui.components.XPMeter
@@ -50,6 +52,7 @@ fun HomeScreen(
     repository: StudyFluidRepository? = null
 ) {
     val haptic = LocalHapticFeedback.current
+    var showMistakeVaultSheet by remember { mutableStateOf(false) }
     val chapters = NcertDatabase.getAllChaptersForClass(profile.cbseClass).ifEmpty {
         listOf(NcertDatabase.class10ChemicalReactions)
     }
@@ -537,6 +540,25 @@ fun HomeScreen(
                 }
             }
 
+            // --- WEAKNESS RADAR & MISTAKE VAULT ---
+            if (repository != null) {
+                item {
+                    val mistakes by repository.getMistakesForActiveProfile().collectAsState(initial = emptyList())
+                    val allProfiles by repository.profiles.collectAsState()
+                    WeaknessRadarChart(
+                        mistakes = mistakes,
+                        studentName = profile.name,
+                        cbseClass = profile.cbseClass,
+                        profiles = allProfiles,
+                        activeProfileId = profile.id,
+                        onSwitchProfile = { newId -> repository.switchProfile(newId) },
+                        onDrillDownSubject = {
+                            showMistakeVaultSheet = true
+                        }
+                    )
+                }
+            }
+
             // --- NCERT TEXTBOOK VAULT CURRICULUM ---
             item {
                 Row(
@@ -567,6 +589,13 @@ fun HomeScreen(
                     onClick = { onNavigateToChapter(ch.id) }
                 )
             }
+        }
+
+        if (showMistakeVaultSheet && repository != null) {
+            MistakeVaultSheet(
+                repository = repository,
+                onDismiss = { showMistakeVaultSheet = false }
+            )
         }
     }
 }

@@ -13,6 +13,8 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import com.example.data.local.room.StudyFluidRoomDatabase
 import com.example.data.local.room.StudyVaultDao
 import com.example.data.local.room.StudyVaultEntity
@@ -781,12 +783,14 @@ class StudyFluidRepository(private val context: Context) {
     }
 
     // --- FEATURE 4: ADAPTIVE MISTAKE VAULT & WEAKNESS RADAR ---
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun getMistakesForActiveProfile(): Flow<List<MistakeEntity>> {
-        return mistakeDao.getAllMistakesForProfile(_activeProfileId.value)
+        return _activeProfileId.flatMapLatest { id -> mistakeDao.getAllMistakesForProfile(id) }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun getUnmasteredMistakesForActiveProfile(): Flow<List<MistakeEntity>> {
-        return mistakeDao.getUnmasteredMistakesForProfile(_activeProfileId.value)
+        return _activeProfileId.flatMapLatest { id -> mistakeDao.getUnmasteredMistakesForProfile(id) }
     }
 
     suspend fun recordMistake(
@@ -817,9 +821,30 @@ class StudyFluidRepository(private val context: Context) {
         return mistake
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun getTopWeakChaptersForActiveProfile(): Flow<List<com.example.data.local.room.ChapterErrorSummary>> {
+        return _activeProfileId.flatMapLatest { id -> mistakeDao.getTopWeakChapters(id) }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun getSubjectWiseErrorAggregation(): Flow<List<com.example.data.local.room.SubjectErrorSummary>> {
+        return _activeProfileId.flatMapLatest { id -> mistakeDao.getSubjectWiseErrorAggregation(id) }
+    }
+
     suspend fun healMistake(mistakeId: String) {
         mistakeDao.markMistakeMastered(mistakeId)
         incrementStreakAndXp(40)
+    }
+
+    suspend fun incrementMistakeError(mistakeId: String) {
+        mistakeDao.incrementErrorCount(mistakeId)
+    }
+
+    suspend fun toggleMistakeMastered(mistakeId: String, isMastered: Boolean) {
+        mistakeDao.setMasteredStatus(mistakeId, isMastered)
+        if (isMastered) {
+            incrementStreakAndXp(40)
+        }
     }
 
     // --- FEATURE 5: CBSE EXAM BOARD PAPER BLUEPRINT SIMULATOR ---

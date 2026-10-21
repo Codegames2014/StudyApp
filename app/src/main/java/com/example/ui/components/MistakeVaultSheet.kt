@@ -146,135 +146,18 @@ fun MistakeVaultSheet(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // --- WEAKNESS RADAR CHART CANVAS ---
-            GlassCard(
-                modifier = Modifier.fillMaxWidth(),
-                glowAccentColor = LiquidGlowRose
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "CBSE Concept Mastery & Weakness Radar",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = LiquidGlowCyan
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .size(190.dp)
-                            .padding(8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            val cx = size.width / 2f
-                            val cy = size.height / 2f
-                            val maxRadius = size.width * 0.44f
-                            val numSpokes = subjects.size
-
-                            // Draw concentric pentagon rings (30%, 60%, 100%)
-                            val ringLevels = listOf(0.35f, 0.70f, 1.0f)
-                            ringLevels.forEach { lvl ->
-                                val ringPath = Path()
-                                for (i in 0 until numSpokes) {
-                                    val angle = (i * 2f * PI / numSpokes) - (PI / 2)
-                                    val r = maxRadius * lvl
-                                    val x = (cx + r * cos(angle)).toFloat()
-                                    val y = (cy + r * sin(angle)).toFloat()
-                                    if (i == 0) ringPath.moveTo(x, y) else ringPath.lineTo(x, y)
-                                }
-                                ringPath.close()
-                                drawPath(
-                                    ringPath,
-                                    color = Color.White.copy(alpha = 0.08f),
-                                    style = Stroke(width = 1.2f)
-                                )
-                            }
-
-                            // Draw spokes
-                            for (i in 0 until numSpokes) {
-                                val angle = (i * 2f * PI / numSpokes) - (PI / 2)
-                                val x = (cx + maxRadius * cos(angle)).toFloat()
-                                val y = (cy + maxRadius * sin(angle)).toFloat()
-                                drawLine(
-                                    color = Color.White.copy(alpha = 0.12f),
-                                    start = Offset(cx, cy),
-                                    end = Offset(x, y),
-                                    strokeWidth = 1f
-                                )
-                            }
-
-                            // Draw student deficiency polygon
-                            val polyPath = Path()
-                            for (i in 0 until numSpokes) {
-                                val ratio = subjectMasteryRatios[i]
-                                val angle = (i * 2f * PI / numSpokes) - (PI / 2)
-                                val r = maxRadius * ratio
-                                val x = (cx + r * cos(angle)).toFloat()
-                                val y = (cy + r * sin(angle)).toFloat()
-                                if (i == 0) polyPath.moveTo(x, y) else polyPath.lineTo(x, y)
-                            }
-                            polyPath.close()
-
-                            // Fill polygon with glowing gradient
-                            drawPath(
-                                polyPath,
-                                brush = Brush.radialGradient(
-                                    colors = listOf(
-                                        LiquidGlowRose.copy(alpha = 0.45f),
-                                        LiquidGlowIndigo.copy(alpha = 0.25f),
-                                        Color.Transparent
-                                    ),
-                                    center = Offset(cx, cy),
-                                    radius = maxRadius
-                                )
-                            )
-                            drawPath(
-                                polyPath,
-                                color = LiquidGlowRose,
-                                style = Stroke(width = 2.5f)
-                            )
-
-                            // Draw point dots
-                            for (i in 0 until numSpokes) {
-                                val ratio = subjectMasteryRatios[i]
-                                val angle = (i * 2f * PI / numSpokes) - (PI / 2)
-                                val r = maxRadius * ratio
-                                val x = (cx + r * cos(angle)).toFloat()
-                                val y = (cy + r * sin(angle)).toFloat()
-                                drawCircle(
-                                    color = if (ratio >= 0.8f) LiquidGlowEmerald else LiquidGlowRose,
-                                    radius = 4.5f,
-                                    center = Offset(x, y)
-                                )
-                            }
-                        }
-                    }
-
-                    // Legend Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround
-                    ) {
-                        subjects.forEachIndexed { idx, subj ->
-                            val score = (subjectMasteryRatios[idx] * 100).toInt()
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(text = subj.take(4), fontSize = 10.sp, color = TextMuted)
-                                Text(
-                                    text = "$score%",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (score >= 80) LiquidGlowEmerald else LiquidGlowRose
-                                )
-                            }
-                        }
-                    }
+            val allProfiles by repository.profiles.collectAsState()
+            WeaknessRadarChart(
+                mistakes = allMistakes,
+                studentName = activeProfile.name,
+                cbseClass = activeProfile.cbseClass,
+                profiles = allProfiles,
+                activeProfileId = activeProfile.id,
+                onSwitchProfile = { repository.switchProfile(it) },
+                onDrillDownSubject = { subject ->
+                    selectedSubjectFilter = subject
                 }
-            }
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 

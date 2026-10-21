@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">StudyFluid</string>
+    <string name="default_web_client_id">studyfluid-web-client-id.apps.googleusercontent.com</string>
 </resources>

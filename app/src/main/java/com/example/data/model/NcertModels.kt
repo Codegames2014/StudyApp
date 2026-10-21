@@ -72,10 +72,3 @@ data class PodcastDialogue(
     val text: String,
     val tone: String = "conversational"
 )
-
-data class MindMapNode(
-    val id: String,
-    val label: String,
-    val subtext: String? = null,
-    val children: List<MindMapNode> = emptyList()
-)

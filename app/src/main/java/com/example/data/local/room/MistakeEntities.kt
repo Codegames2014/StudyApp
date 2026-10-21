@@ -28,7 +28,23 @@ data class MistakeEntity(
     val reviewCount: Int = 0,
     val ncertCitation: String = "",
     val createdAt: Long = System.currentTimeMillis(),
-    val masteredAt: Long? = null
+    val masteredAt: Long? = null,
+    val chapter: String = chapterId,
+    val timestamp: Long = createdAt,
+    val errorCount: Int = 1
+)
+
+data class SubjectErrorSummary(
+    val subject: String,
+    val totalErrors: Int,
+    val unmasteredCount: Int
+)
+
+data class ChapterErrorSummary(
+    val chapter: String,
+    val subject: String,
+    val totalErrors: Int,
+    val unmasteredCount: Int
 )
 
 @Dao
@@ -46,6 +62,12 @@ interface MistakeDao {
     @Query("SELECT COUNT(*) FROM mistake_vault WHERE studentProfileId = :profileId AND isMastered = 0")
     fun getUnmasteredCount(profileId: String): Flow<Int>
 
+    @Query("SELECT subject, SUM(errorCount) as totalErrors, SUM(CASE WHEN isMastered = 0 THEN 1 ELSE 0 END) as unmasteredCount FROM mistake_vault WHERE studentProfileId = :profileId GROUP BY subject")
+    fun getSubjectWiseErrorAggregation(profileId: String): Flow<List<SubjectErrorSummary>>
+
+    @Query("SELECT chapter, subject, SUM(errorCount) as totalErrors, SUM(CASE WHEN isMastered = 0 THEN 1 ELSE 0 END) as unmasteredCount FROM mistake_vault WHERE studentProfileId = :profileId AND isMastered = 0 GROUP BY chapter, subject ORDER BY totalErrors DESC LIMIT 3")
+    fun getTopWeakChapters(profileId: String): Flow<List<ChapterErrorSummary>>
+
     @Query("SELECT * FROM mistake_vault WHERE id = :id LIMIT 1")
     suspend fun getMistakeById(id: String): MistakeEntity?
 
@@ -60,6 +82,12 @@ interface MistakeDao {
 
     @Query("UPDATE mistake_vault SET isMastered = 1, masteredAt = :timestamp, reviewCount = reviewCount + 1 WHERE id = :id")
     suspend fun markMistakeMastered(id: String, timestamp: Long = System.currentTimeMillis())
+
+    @Query("UPDATE mistake_vault SET isMastered = :isMastered, masteredAt = :masteredAt WHERE id = :id")
+    suspend fun setMasteredStatus(id: String, isMastered: Boolean, masteredAt: Long? = System.currentTimeMillis())
+
+    @Query("UPDATE mistake_vault SET errorCount = errorCount + 1, timestamp = :timestamp WHERE id = :id")
+    suspend fun incrementErrorCount(id: String, timestamp: Long = System.currentTimeMillis())
 
     @Query("UPDATE mistake_vault SET reviewCount = reviewCount + 1 WHERE id = :id")
     suspend fun incrementReviewCount(id: String)

@@ -14,6 +14,7 @@ val LiquidGlowViolet = Color(0xFF8B5CF6)
 val LiquidGlowEmerald = Color(0xFF10B981)
 val LiquidGlowAmber = Color(0xFFF59E0B)
 val LiquidGlowRose = Color(0xFFF43F5E)
+val LiquidGlowPink = Color(0xFFEC4899)
 
 val TextPrimary = Color(0xFFF8FAFC)
 val TextSecondary = Color(0xFF94A3B8)

@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.local.StudyFluidRepository
 import com.example.ui.components.GlassCard
 import com.example.ui.components.HapticHelper
+import com.example.ui.components.WeaknessRadarChart
 import com.example.ui.components.XPMeter
 import com.example.ui.theme.*
 
@@ -208,6 +209,20 @@ fun ProfileScreen(
                     )
                 }
             }
+        }
+
+        // Live Room Mistake Vault Weakness Radar Chart
+        item {
+            val liveMistakes by repository.getMistakesForActiveProfile().collectAsState(initial = emptyList())
+            val allProfiles by repository.profiles.collectAsState()
+            WeaknessRadarChart(
+                mistakes = liveMistakes,
+                studentName = activeProfile.name,
+                cbseClass = activeProfile.cbseClass,
+                profiles = allProfiles,
+                activeProfileId = activeProfile.id,
+                onSwitchProfile = { repository.switchProfile(it) }
+            )
         }
 
         // Educational Profile Settings (CBSE Class & School)

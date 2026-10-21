@@ -560,7 +560,7 @@ object GeminiService {
             **Question 2 (Physics - 3 Marks)**:
             A concave lens of focal length 15 cm forms an image 10 cm from the lens. Calculate how far the object is placed from the lens.
             
-            💡 *Sign Convention Rule*: For a concave lens, both focal length ($f$) and image distance ($v$) are negative!
+            💡 *Sign Convention Rule*: For a concave lens, both focal length (${'$'}f${'$'}) and image distance (${'$'}v${'$'}) are negative!
             $\frac{1}{f} = \frac{1}{v} - \frac{1}{u} \implies \frac{1}{u} = \frac{1}{-10} - \frac{1}{-15} = -\frac{1}{30} \implies u = -30\text{ cm}$.
         """.trimIndent()
     }
@@ -825,11 +825,11 @@ object GeminiService {
                         Formula: $\frac{1}{f} = \frac{1}{v} - \frac{1}{u}$
                         
                         **3 Golden Rules yaad rakho**:
-                        1. Object distance ($u$) hamesha **NEGATIVE** (-ve) hoga, kyunki object lens ke left mein rakha hota hai.
-                        2. **Convex Lens**: Focal length ($f$) hamesha **POSITIVE** (+ve).
-                        3. **Concave Lens**: Focal length ($f$) hamesha **NEGATIVE** (-ve).
+                        1. Object distance (${'$'}u${'$'}) hamesha **NEGATIVE** (-ve) hoga, kyunki object lens ke left mein rakha hota hai.
+                        2. **Convex Lens**: Focal length (${'$'}f${'$'}) hamesha **POSITIVE** (+ve).
+                        3. **Concave Lens**: Focal length (${'$'}f${'$'}) hamesha **NEGATIVE** (-ve).
                         
-                        💡 *Pro Tip*: Agar real image ban rahi hai, toh $v$ positive hoga. Agar virtual and erect hai, toh $v$ negative hoga!
+                        💡 *Pro Tip*: Agar real image ban rahi hai, toh ${'$'}v positive hoga. Agar virtual and erect hai, toh ${'$'}v negative hoga!
                         """.trimIndent()
                     }
                     else -> {
@@ -909,3 +909,9 @@ object GeminiService {
         )
     }
 }
+
+data class GeminiResponse(
+    val text: String,
+    val citations: List<String> = emptyList(),
+    val isFromCloud: Boolean = false
+)

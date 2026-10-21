@@ -17,7 +17,46 @@ data class MindMapNode(
     val conceptType: String = "CONCEPT", // "CORE", "LAW", "FORMULA", "EXAMPLE"
     val colorHex: Long = 0xFF6366F1,
     val children: List<MindMapNode> = emptyList()
-)
+) {
+    val label: String get() = title
+    val subtext: String? get() = subtitle
+
+    constructor(id: String, title: String, subtitle: String?, conceptType: String, colorHex: Long) : this(
+        id = id,
+        title = title,
+        subtitle = subtitle,
+        conceptType = conceptType,
+        colorHex = colorHex,
+        children = emptyList()
+    )
+
+    constructor(id: String, label: String) : this(
+        id = id,
+        title = label,
+        subtitle = null,
+        conceptType = "CONCEPT",
+        colorHex = 0xFF6366F1,
+        children = emptyList()
+    )
+
+    constructor(id: String, label: String, children: List<MindMapNode>) : this(
+        id = id,
+        title = label,
+        subtitle = null,
+        conceptType = "CONCEPT",
+        colorHex = 0xFF6366F1,
+        children = children
+    )
+
+    constructor(id: String, label: String, subtext: String?, children: List<MindMapNode>) : this(
+        id = id,
+        title = label,
+        subtitle = subtext,
+        conceptType = "CONCEPT",
+        colorHex = 0xFF6366F1,
+        children = children
+    )
+}
 
 data class HandwrittenNoteScanResult(
     val id: String,
