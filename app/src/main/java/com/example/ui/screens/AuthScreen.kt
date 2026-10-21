@@ -176,27 +176,41 @@ fun AuthScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(80.dp)
+                            .size(86.dp)
                             .clip(CircleShape)
                             .background(
                                 Brush.linearGradient(
-                                    listOf(LiquidGlowIndigo, LiquidGlowCyan)
+                                    listOf(
+                                        Color(0xFF6366F1).copy(alpha = 0.25f),
+                                        Color(0xFFEC4899).copy(alpha = 0.20f)
+                                    )
                                 )
                             )
-                            .border(2.dp, Color.White.copy(alpha = 0.35f), CircleShape),
+                            .border(
+                                1.8.dp,
+                                Brush.linearGradient(
+                                    listOf(LiquidGlowIndigo, LiquidGlowPink, LiquidGlowCyan)
+                                ),
+                                CircleShape
+                            )
+                            .padding(10.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = "🌊", fontSize = 42.sp)
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.flow_cbse_logo),
+                            contentDescription = "FlowCBSE Logo",
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "StudyFluid",
+                        text = "FlowCBSE",
                         fontSize = 30.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = TextPrimary,
-                        letterSpacing = 0.5.sp
+                        letterSpacing = 0.6.sp
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
@@ -208,6 +222,7 @@ fun AuthScreen(
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Center
                     )
+
                 }
             }
 

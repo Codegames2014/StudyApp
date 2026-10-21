@@ -1,6 +1,7 @@
 {
-  "name": "StudyFluid",
-  "description": "Ultra-smooth CBSE study application with Gemini AI FluidTutor, multi-student profiles, NotebookLM vaults, NCERT chapters, and liquid physics.",
+  "name": "FlowCBSE",
+  "description": "Ultra-smooth CBSE study application with Gemini AI FluidTutor, Lottie animations, multi-student profiles, personalized curriculum roadmaps, and Weakness Radar.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
+

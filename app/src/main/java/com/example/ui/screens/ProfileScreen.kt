@@ -31,7 +31,8 @@ import com.example.ui.theme.*
 @Composable
 fun ProfileScreen(
     repository: StudyFluidRepository,
-    onOpenProfileSwitcher: () -> Unit
+    onOpenProfileSwitcher: () -> Unit,
+    onLaunchSurvey: (() -> Unit)? = null
 ) {
     val haptic = LocalHapticFeedback.current
     val activeProfile = repository.activeProfile
@@ -266,12 +267,37 @@ fun ProfileScreen(
 
                     if (!isEditingDetails) {
                         ProfileInfoRow("Full Name", activeProfile.name)
-                        ProfileInfoRow("CBSE Class", "Class ${activeProfile.cbseClass}")
+                        ProfileInfoRow("Curriculum Board", activeProfile.board)
+                        ProfileInfoRow("Grade Level", "Class ${activeProfile.cbseClass}")
                         if (activeProfile.cbseClass >= 11) {
                             ProfileInfoRow("Academic Stream", activeProfile.stream)
                         }
+                        ProfileInfoRow("Location Context", "${activeProfile.city}, ${activeProfile.state}")
                         ProfileInfoRow("School / Institution", activeProfile.schoolName)
-                        ProfileInfoRow("Google Account", activeProfile.email)
+                        if (activeProfile.studyRoadmapSummary.isNotBlank()) {
+                            ProfileInfoRow("AI Study Roadmap", activeProfile.studyRoadmapSummary)
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Button(
+                            onClick = {
+                                HapticHelper.triggerImpact(haptic)
+                                onLaunchSurvey?.invoke()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = LiquidGlowIndigo.copy(alpha = 0.85f),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Yellow)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Update Curriculum Survey & AI Roadmap", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     } else {
                         OutlinedTextField(
                             value = editName,
@@ -292,6 +318,7 @@ fun ProfileScreen(
                 }
             }
         }
+
 
         // Multi-Account Switcher Hub Section
         item {

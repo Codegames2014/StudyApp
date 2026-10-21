@@ -109,6 +109,7 @@ dependencies {
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
   implementation(libs.firebase.firestore)
+  implementation(libs.lottie.compose)
 
   implementation(libs.firebase.auth)
   implementation(libs.androidx.credentials)

@@ -36,6 +36,8 @@ import com.example.ui.components.MistakeVaultSheet
 import com.example.ui.components.WeaknessRadarChart
 import com.example.data.local.StudyFluidRepository
 import com.example.ui.components.FluidThemeSelectorCard
+import com.example.ui.components.FocusStreakCard
+import com.example.ui.components.PomodoroTimerCard
 import com.example.ui.components.XPMeter
 import com.example.ui.theme.*
 
@@ -197,6 +199,32 @@ fun HomeScreen(
                 }
             }
 
+            // --- MODULE 3: HOME DASHBOARD 'FOCUS STREAK' COUNTER ---
+            item {
+                FocusStreakCard(
+                    streakDays = profile.studyStreakDays,
+                    dailyGoalMinutes = 60,
+                    minutesStudiedToday = 45,
+                    knowledgePoints = profile.knowledgePoints,
+                    onClick = {
+                        if (repository != null) {
+                            repository.incrementStreakAndXp(10)
+                        }
+                    }
+                )
+            }
+
+            // --- MODULE 4: GLASSMORPHIC POMODORO STUDY TIMER ---
+            item {
+                PomodoroTimerCard(
+                    onSessionCompleted = { mode ->
+                        if (repository != null && mode.defaultMinutes >= 15) {
+                            repository.incrementStreakAndXp(35)
+                        }
+                    }
+                )
+            }
+
             // --- FLUID THEME ENGINE SELECTOR ---
             if (repository != null) {
                 item {
@@ -211,6 +239,7 @@ fun HomeScreen(
                     glowAccentColor = LiquidGlowIndigo,
                     onClick = onNavigateToTutor
                 ) {
+
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),

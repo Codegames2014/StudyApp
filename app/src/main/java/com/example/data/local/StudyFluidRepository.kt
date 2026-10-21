@@ -33,6 +33,7 @@ class StudyFluidRepository(private val context: Context) {
     val studyVaultDao: StudyVaultDao = roomDb.studyVaultDao()
     val mistakeDao: MistakeDao = roomDb.mistakeDao()
     val studentProfileDao: StudentProfileDao = roomDb.studentProfileDao()
+    val studyProgressDao: com.example.data.local.room.StudyProgressDao = roomDb.studyProgressDao()
 
     // --- TUTOR LANGUAGE & TONE (FEATURE 6) ---
     private val _activeTutorTone = MutableStateFlow<TutorLanguageTone>(TutorLanguageTone.FRIENDLY_HINGLISH)
@@ -941,6 +942,53 @@ class StudyFluidRepository(private val context: Context) {
             incrementStreakAndXp(40)
         }
     }
+
+    // --- MODULE 2: NCERT SYLLABUS STUDY PROGRESS & ROOM TRACKER ---
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun getStudyProgressForActiveProfile(): Flow<List<com.example.data.local.room.StudyProgressEntity>> {
+        return _activeProfileId.flatMapLatest { id -> studyProgressDao.getAllProgressForProfile(id) }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun getStudyProgressForSubject(subjectId: String): Flow<List<com.example.data.local.room.StudyProgressEntity>> {
+        return _activeProfileId.flatMapLatest { id -> studyProgressDao.getProgressForSubject(id, subjectId) }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun getProgressForChapter(chapterId: String): Flow<com.example.data.local.room.StudyProgressEntity?> {
+        return _activeProfileId.flatMapLatest { id -> studyProgressDao.getProgressForChapter(id, chapterId) }
+    }
+
+    suspend fun toggleChapterCompleted(subjectId: String, chapterId: String, isCompleted: Boolean) {
+        val profileId = _activeProfileId.value
+        val existing = studyProgressDao.getProgressForChapterSync(profileId, chapterId)
+        if (existing == null) {
+            studyProgressDao.insertOrUpdate(
+                com.example.data.local.room.StudyProgressEntity(
+                    id = "prog_${profileId}_$chapterId",
+                    studentProfileId = profileId,
+                    subjectId = subjectId,
+                    chapterId = chapterId,
+                    isCompleted = isCompleted,
+                    lastStudiedTimestamp = System.currentTimeMillis(),
+                    revisionCount = if (isCompleted) 1 else 0
+                )
+            )
+        } else {
+            studyProgressDao.updateCompletion(profileId, chapterId, isCompleted)
+        }
+
+        if (isCompleted) {
+            incrementStreakAndXp(50)
+        }
+    }
+
+    suspend fun incrementChapterRevision(chapterId: String) {
+        val profileId = _activeProfileId.value
+        studyProgressDao.incrementRevision(profileId, chapterId)
+        incrementStreakAndXp(25)
+    }
+
 
     // --- FEATURE 5: CBSE EXAM BOARD PAPER BLUEPRINT SIMULATOR ---
     fun getMockExamPaperForActiveProfile(): CbseExamPaper {

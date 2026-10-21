@@ -7,7 +7,19 @@ data class NcertSubject(
     val colorHex: Long,
     val cbseClass: Int,
     val chapters: List<NcertChapter>
-)
+) {
+    val iconEmoji: String
+        get() = when {
+            name.contains("Chemistry", ignoreCase = true) || id.contains("chem", ignoreCase = true) -> "⚗️"
+            name.contains("Physics", ignoreCase = true) || id.contains("phy", ignoreCase = true) -> "⚡"
+            name.contains("Biology", ignoreCase = true) || id.contains("bio", ignoreCase = true) -> "🧬"
+            name.contains("Science", ignoreCase = true) || id.contains("sci", ignoreCase = true) -> "🔬"
+            name.contains("Math", ignoreCase = true) -> "📐"
+            name.contains("Social", ignoreCase = true) -> "🌍"
+            else -> "📚"
+        }
+}
+
 
 data class NcertChapter(
     val id: String,

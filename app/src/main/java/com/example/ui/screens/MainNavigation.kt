@@ -23,7 +23,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.BackHandler
 import com.example.data.local.StudyFluidRepository
+import com.example.data.model.NcertSubject
 import com.example.ui.components.HapticHelper
 import com.example.ui.components.ProfileSwitcherSheet
 import com.example.ui.theme.*
@@ -40,10 +42,31 @@ enum class AppDestination(val label: String, val icon: ImageVector) {
 
 @Composable
 fun MainNavigation(repository: StudyFluidRepository) {
+
     val haptic = LocalHapticFeedback.current
     var currentDestination by remember { mutableStateOf(AppDestination.HOME) }
     var activeNotebookChapterId by remember { mutableStateOf<String?>(null) }
     var showProfileSwitcher by remember { mutableStateOf(false) }
+    var showSurveyScreen by remember { mutableStateOf(false) }
+
+    var selectedCurriculumClass by remember { mutableStateOf<Int?>(null) }
+    var selectedCurriculumSubject by remember { mutableStateOf<NcertSubject?>(null) }
+
+    BackHandler(enabled = activeNotebookChapterId != null) {
+        activeNotebookChapterId = null
+    }
+
+    BackHandler(enabled = showSurveyScreen) {
+        showSurveyScreen = false
+    }
+
+    BackHandler(enabled = selectedCurriculumSubject != null) {
+        selectedCurriculumSubject = null
+    }
+
+    BackHandler(enabled = selectedCurriculumClass != null && selectedCurriculumSubject == null) {
+        selectedCurriculumClass = null
+    }
 
     val profiles by repository.profiles.collectAsState()
     val activeProfileId by repository.activeProfileId.collectAsState()
@@ -137,7 +160,10 @@ fun MainNavigation(repository: StudyFluidRepository) {
                         onNavigateToChapter = { chId -> activeNotebookChapterId = chId },
                         onNavigateToNotebookLm = { chId -> activeNotebookChapterId = chId },
                         onNavigateToTutor = { currentDestination = AppDestination.TUTOR },
-                        onNavigateToVault = { currentDestination = AppDestination.VAULT },
+                        onNavigateToVault = {
+                            selectedCurriculumClass = activeProfile.cbseClass
+                            currentDestination = AppDestination.VAULT
+                        },
                         onNavigateToMastery = { currentDestination = AppDestination.MASTERY },
                         onNavigateToPlanner = { currentDestination = AppDestination.PLANNER },
                         repository = repository
@@ -148,10 +174,34 @@ fun MainNavigation(repository: StudyFluidRepository) {
                         onNavigateToChapter = { chId -> activeNotebookChapterId = chId }
                     )
 
-                    AppDestination.VAULT -> NcertVaultScreen(
-                        repository = repository,
-                        onNavigateToChapterNotebook = { chId -> activeNotebookChapterId = chId }
-                    )
+                    AppDestination.VAULT -> {
+                        when {
+                            selectedCurriculumSubject != null -> {
+                                ChapterBrowserScreen(
+                                    subject = selectedCurriculumSubject!!,
+                                    repository = repository,
+                                    onNavigateToChapterDetail = { chId -> activeNotebookChapterId = chId },
+                                    onBack = { selectedCurriculumSubject = null }
+                                )
+                            }
+                            selectedCurriculumClass != null -> {
+                                SubjectSelectionScreen(
+                                    selectedClass = selectedCurriculumClass!!,
+                                    repository = repository,
+                                    onSelectSubject = { subj -> selectedCurriculumSubject = subj },
+                                    onBack = { selectedCurriculumClass = null }
+                                )
+                            }
+                            else -> {
+                                ClassSelectionScreen(
+                                    repository = repository,
+                                    onSelectClass = { cls -> selectedCurriculumClass = cls },
+                                    onBack = { currentDestination = AppDestination.HOME }
+                                )
+                            }
+                        }
+                    }
+
 
                     AppDestination.PLANNER -> PlannerScreen(
                         repository = repository,
@@ -170,12 +220,22 @@ fun MainNavigation(repository: StudyFluidRepository) {
 
                     AppDestination.PROFILE -> ProfileScreen(
                         repository = repository,
-                        onOpenProfileSwitcher = { showProfileSwitcher = true }
+                        onOpenProfileSwitcher = { showProfileSwitcher = true },
+                        onLaunchSurvey = { showSurveyScreen = true }
                     )
                 }
             }
+
+            if (showSurveyScreen) {
+                StudentSurveyScreen(
+                    repository = repository,
+                    onSurveyCompleted = { showSurveyScreen = false },
+                    onBack = { showSurveyScreen = false }
+                )
+            }
         }
     }
+
 
     if (showProfileSwitcher) {
         ProfileSwitcherSheet(
