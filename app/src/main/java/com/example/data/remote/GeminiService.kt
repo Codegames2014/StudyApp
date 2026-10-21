@@ -908,6 +908,299 @@ object GeminiService {
             isFromCloud = false
         )
     }
+
+    // --- MODULE 2: STUDENT ONBOARDING & APP SURVEY AI ENGINE ---
+    suspend fun generatePersonalizedRoadmap(
+        studentName: String,
+        gradeClass: Int,
+        board: String,
+        state: String,
+        city: String,
+        stream: String
+    ): OnboardingRoadmapResult = withContext(Dispatchers.IO) {
+        val apiKey = getApiKey()
+        if (apiKey.isNotEmpty()) {
+            try {
+                val prompt = """
+                    You are the Chief Academic Curriculum Director for Indian School Education (NCERT, CBSE, ICSE, State Boards).
+                    Create a personalized study roadmap, recommended high-yield chapter vaults, and daily revision schedule for:
+                    - Student: $studentName
+                    - Grade / Class: Class $gradeClass
+                    - Curriculum Board: $board
+                    - State: $state, City: $city
+                    - Academic Stream: $stream
+                    
+                    Respond strictly in valid JSON without backticks:
+                    {
+                      "roadmapTitle": "Strategic Roadmap Title",
+                      "executiveSummary": "2-3 sentences explaining personalized strategy for this board/state/class",
+                      "stages": [
+                        {
+                          "stageTitle": "Stage 1: Foundation Sprint",
+                          "timeline": "Weeks 1-4",
+                          "targetChapters": ["Chapter 1", "Chapter 2"],
+                          "activeRecallStrategy": "Daily flashcard retrieval and concept mapping"
+                        },
+                        {
+                          "stageTitle": "Stage 2: Core Board Mastery",
+                          "timeline": "Weeks 5-8",
+                          "targetChapters": ["Chapter 3", "Chapter 4"],
+                          "activeRecallStrategy": "Previous year board question papers and formula derivations"
+                        }
+                      ],
+                      "recommendedChapters": ["Chapter A", "Chapter B", "Chapter C", "Chapter D"],
+                      "dailySchedule": [
+                        {
+                          "timeSlot": "🌅 Morning (6:30 - 7:30 AM)",
+                          "focusActivity": "High-cognitive recall & Formula derivation",
+                          "pedagogyTip": "Peak circadian focus window for STEM theory"
+                        },
+                        {
+                          "timeSlot": "🌇 Afternoon (4:30 - 5:30 PM)",
+                          "focusActivity": "Textbook exemplar numericals & Chapter quizzes",
+                          "pedagogyTip": "Active practice with immediate feedback"
+                        },
+                        {
+                          "timeSlot": "🌙 Evening (8:30 - 9:30 PM)",
+                          "focusActivity": "Spaced repetition review & Mistake vault healing",
+                          "pedagogyTip": "Consolidate memory before sleep cycle"
+                        }
+                      ]
+                    }
+                """.trimIndent()
+
+                val requestJson = JSONObject().apply {
+                    put("contents", JSONArray().put(JSONObject().put("parts", JSONArray().put(JSONObject().put("text", prompt)))))
+                    put("generationConfig", JSONObject().apply {
+                        put("temperature", 0.4)
+                        put("topP", 0.9)
+                    })
+                }
+
+                val request = Request.Builder()
+                    .url("$FLASH_URL?key=$apiKey")
+                    .post(requestJson.toString().toRequestBody("application/json".toMediaType()))
+                    .build()
+
+                val response = okHttpClient.newCall(request).execute()
+                val body = response.body?.string()
+                if (response.isSuccessful && !body.isNullOrBlank()) {
+                    val root = JSONObject(body)
+                    val rawText = root.optJSONArray("candidates")
+                        ?.optJSONObject(0)
+                        ?.optJSONObject("content")
+                        ?.optJSONArray("parts")
+                        ?.optJSONObject(0)
+                        ?.optString("text") ?: ""
+
+                    val cleanedJson = rawText.trim()
+                        .removePrefix("```json")
+                        .removePrefix("```")
+                        .removeSuffix("```")
+                        .trim()
+
+                    val parsed = JSONObject(cleanedJson)
+                    val title = parsed.optString("roadmapTitle", "Class $gradeClass $board Personalized Academic Roadmap")
+                    val summary = parsed.optString("executiveSummary", "Curriculum roadmap optimized for $board standards in $city, $state.")
+
+                    val stagesList = mutableListOf<RoadmapStage>()
+                    val stagesArr = parsed.optJSONArray("stages")
+                    if (stagesArr != null) {
+                        for (i in 0 until stagesArr.length()) {
+                            val stObj = stagesArr.getJSONObject(i)
+                            val chList = mutableListOf<String>()
+                            val chArr = stObj.optJSONArray("targetChapters")
+                            if (chArr != null) {
+                                for (j in 0 until chArr.length()) chList.add(chArr.getString(j))
+                            }
+                            stagesList.add(
+                                RoadmapStage(
+                                    stageTitle = stObj.optString("stageTitle", "Stage ${i + 1}"),
+                                    timeline = stObj.optString("timeline", "Weeks ${i * 4 + 1}-${i * 4 + 4}"),
+                                    targetChapters = chList,
+                                    activeRecallStrategy = stObj.optString("activeRecallStrategy", "Active recall & self-quizzing")
+                                )
+                            )
+                        }
+                    }
+
+                    val recChapters = mutableListOf<String>()
+                    val recArr = parsed.optJSONArray("recommendedChapters")
+                    if (recArr != null) {
+                        for (i in 0 until recArr.length()) recChapters.add(recArr.getString(i))
+                    }
+
+                    val scheduleList = mutableListOf<ScheduleBlock>()
+                    val schedArr = parsed.optJSONArray("dailySchedule")
+                    if (schedArr != null) {
+                        for (i in 0 until schedArr.length()) {
+                            val scObj = schedArr.getJSONObject(i)
+                            scheduleList.add(
+                                ScheduleBlock(
+                                    timeSlot = scObj.optString("timeSlot", "Focus Slot ${i + 1}"),
+                                    focusActivity = scObj.optString("focusActivity", "Study block"),
+                                    pedagogyTip = scObj.optString("pedagogyTip", "NCERT active recall")
+                                )
+                            )
+                        }
+                    }
+
+                    if (stagesList.isNotEmpty()) {
+                        return@withContext OnboardingRoadmapResult(
+                            roadmapTitle = title,
+                            executiveSummary = summary,
+                            stages = stagesList,
+                            recommendedChapters = recChapters.ifEmpty { getDefaultChapters(gradeClass, board) },
+                            dailySchedule = scheduleList.ifEmpty { getDefaultSchedule() },
+                            isFromCloud = true
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Gemini roadmap generation failed, using local curriculum heuristics", e)
+            }
+        }
+
+        // Local Intelligent Curriculum Generator
+        return@withContext generateLocalRoadmap(
+            studentName = studentName,
+            gradeClass = gradeClass,
+            board = board,
+            state = state,
+            city = city,
+            stream = stream
+        )
+    }
+
+    private fun getDefaultChapters(gradeClass: Int, board: String): List<String> {
+        return when (gradeClass) {
+            10 -> listOf(
+                "Chemical Reactions & Equations (NCERT Ch.1)",
+                "Light – Reflection & Refraction (NCERT Ch.10)",
+                "Life Processes & Respiration (NCERT Ch.6)",
+                "Quadratic Equations & Discriminants (NCERT Ch.4)"
+            )
+            11, 12 -> listOf(
+                "Electrostatics & Electric Fields",
+                "Chemical Kinetics & Solutions",
+                "Calculus & Differential Equations",
+                "Human Physiology & Biomolecules"
+            )
+            else -> listOf(
+                "Number Systems & Fractions",
+                "Motion, Force & Work Energy",
+                "Cell Structure & Microorganisms",
+                "Environmental Sustainability & Water"
+            )
+        }
+    }
+
+    private fun getDefaultSchedule(): List<ScheduleBlock> {
+        return listOf(
+            ScheduleBlock(
+                timeSlot = "🌅 Morning (6:30 - 7:30 AM)",
+                focusActivity = "High-Retention Theory & Formula Proofs",
+                pedagogyTip = "Pre-school cognitive peak for derivations and NCERT definitions."
+            ),
+            ScheduleBlock(
+                timeSlot = "🌇 Afternoon (4:30 - 5:30 PM)",
+                focusActivity = "Active Chapter Recall & Board Numerical Practice",
+                pedagogyTip = "Immediate application of classroom topics with Socratic doubt checking."
+            ),
+            ScheduleBlock(
+                timeSlot = "🌙 Evening (8:30 - 9:30 PM)",
+                focusActivity = "Mistake Vault Review & Spaced Flashcards",
+                pedagogyTip = "Close cognitive gaps before sleep memory consolidation."
+            )
+        )
+    }
+
+    private fun generateLocalRoadmap(
+        studentName: String,
+        gradeClass: Int,
+        board: String,
+        state: String,
+        city: String,
+        stream: String
+    ): OnboardingRoadmapResult {
+        val boardDescriptor = when (board) {
+            "ICSE" -> "CISCE Application-Centric Standards"
+            "State Board" -> "$state State Curriculum & Textbooks"
+            else -> "CBSE NCERT National Standard"
+        }
+
+        val chapters = when (gradeClass) {
+            10 -> listOf(
+                "Chemical Reactions and Equations",
+                "Light – Reflection and Refraction",
+                "Life Processes (Nutrition & Respiration)",
+                "Quadratic Equations & Arithmetic Progressions",
+                "Resources and Development ($state Context)"
+            )
+            9 -> listOf(
+                "Matter in Our Surroundings",
+                "Force and Laws of Motion",
+                "Tissues and Plant Structure",
+                "Linear Equations in Two Variables"
+            )
+            11, 12 -> when {
+                stream.contains("PCB", ignoreCase = true) -> listOf(
+                    "Human Physiology & Biomolecules",
+                    "Chemical Bonding & Molecular Geometry",
+                    "Units, Measurements & Motion in a Straight Line",
+                    "Coordination Compounds"
+                )
+                stream.contains("Commerce", ignoreCase = true) -> listOf(
+                    "Accountancy & Financial Statements",
+                    "Macroeconomics & Indian Economic Growth",
+                    "Business Environment & Principles of Management",
+                    "Applied Mathematics & Matrices"
+                )
+                else -> listOf(
+                    "Electrostatics & Potential Capacitance",
+                    "Current Electricity & Kirchhoff's Laws",
+                    "Solid State & Solutions",
+                    "Calculus & Continuity"
+                )
+            }
+            else -> listOf(
+                "Integers, Fractions & Rational Numbers",
+                "Light, Sound and Force in Daily Life",
+                "Plant and Animal Adaptations",
+                "Our Environment & Natural Resources"
+            )
+        }
+
+        val stages = listOf(
+            RoadmapStage(
+                stageTitle = "Stage 1: Core Foundation & Concept Mapping",
+                timeline = "Weeks 1 – 3",
+                targetChapters = chapters.take(2),
+                activeRecallStrategy = "Convert NCERT text paragraphs into self-quiz questions; create visual formula sheets."
+            ),
+            RoadmapStage(
+                stageTitle = "Stage 2: Board Exam Problem Solving & Numericals",
+                timeline = "Weeks 4 – 7",
+                targetChapters = chapters.drop(2).take(2),
+                activeRecallStrategy = "Solve 5-year board exam question banks with step-wise CBSE/State Board marking rubrics."
+            ),
+            RoadmapStage(
+                stageTitle = "Stage 3: Weakness Healing & Full Mock Simulation",
+                timeline = "Weeks 8 – 10",
+                targetChapters = chapters,
+                activeRecallStrategy = "Re-test unmastered questions in the Mistake Vault until 90%+ proficiency is achieved."
+            )
+        )
+
+        return OnboardingRoadmapResult(
+            roadmapTitle = "$studentName's $board Class $gradeClass Study Blueprint",
+            executiveSummary = "Tailored study framework calibrated for $board curriculum in $city, $state. Emphasizes step-by-step scoring formulas, targeted NCERT textbook depth, and spaced revision cycles.",
+            stages = stages,
+            recommendedChapters = chapters,
+            dailySchedule = getDefaultSchedule(),
+            isFromCloud = false
+        )
+    }
 }
 
 data class GeminiResponse(
@@ -915,3 +1208,26 @@ data class GeminiResponse(
     val citations: List<String> = emptyList(),
     val isFromCloud: Boolean = false
 )
+
+data class OnboardingRoadmapResult(
+    val roadmapTitle: String,
+    val executiveSummary: String,
+    val stages: List<RoadmapStage>,
+    val recommendedChapters: List<String>,
+    val dailySchedule: List<ScheduleBlock>,
+    val isFromCloud: Boolean = false
+)
+
+data class RoadmapStage(
+    val stageTitle: String,
+    val timeline: String,
+    val targetChapters: List<String>,
+    val activeRecallStrategy: String
+)
+
+data class ScheduleBlock(
+    val timeSlot: String,
+    val focusActivity: String,
+    val pedagogyTip: String
+)
+

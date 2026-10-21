@@ -21,15 +21,18 @@ import com.example.data.local.room.StudyVaultEntity
 import com.example.data.local.room.VaultItemEntity
 import com.example.data.local.room.MistakeDao
 import com.example.data.local.room.MistakeEntity
+import com.example.data.local.room.StudentProfileDao
+import com.example.data.local.room.StudentProfileEntity
 
 class StudyFluidRepository(private val context: Context) {
 
     private val scope = CoroutineScope(Dispatchers.Main)
 
-    // --- ROOM DATABASE (LOCAL VAULTS & MISTAKE VAULT) ---
+    // --- ROOM DATABASE (LOCAL VAULTS, MISTAKE VAULT & STUDENT PROFILES) ---
     val roomDb = StudyFluidRoomDatabase.getDatabase(context)
     val studyVaultDao: StudyVaultDao = roomDb.studyVaultDao()
     val mistakeDao: MistakeDao = roomDb.mistakeDao()
+    val studentProfileDao: StudentProfileDao = roomDb.studentProfileDao()
 
     // --- TUTOR LANGUAGE & TONE (FEATURE 6) ---
     private val _activeTutorTone = MutableStateFlow<TutorLanguageTone>(TutorLanguageTone.FRIENDLY_HINGLISH)
@@ -67,9 +70,35 @@ class StudyFluidRepository(private val context: Context) {
             // Firebase Auth not initialized or in local test environment
         }
 
-        // Seed initial Room vaults for multi-student profiles if empty
+        // Seed initial Room student profiles & vaults if empty
         scope.launch(Dispatchers.IO) {
             try {
+                val profileCount = studentProfileDao.getProfileCount()
+                if (profileCount == 0) {
+                    val initialEntities = defaultProfiles.map { p ->
+                        StudentProfileEntity(
+                            id = p.id,
+                            name = p.name,
+                            email = p.email,
+                            gradeClass = p.cbseClass,
+                            board = p.board,
+                            state = p.state,
+                            city = p.city,
+                            stream = p.stream,
+                            schoolName = p.schoolName,
+                            avatarEmoji = p.avatarEmoji,
+                            avatarColorHex = p.avatarColorHex,
+                            studyStreakDays = p.studyStreakDays,
+                            knowledgePoints = p.knowledgePoints,
+                            studyRoadmapSummary = p.studyRoadmapSummary,
+                            recommendedChaptersJson = p.recommendedChapters.joinToString("||"),
+                            dailyScheduleJson = p.dailyScheduleJson,
+                            isOnboardingCompleted = p.isOnboardingCompleted
+                        )
+                    }
+                    studentProfileDao.insertAll(initialEntities)
+                }
+
                 val existing = studyVaultDao.getVaultById("vault_aarav_chem")
                 if (existing == null) {
                     val chemVault = StudyVaultEntity(
@@ -704,6 +733,8 @@ class StudyFluidRepository(private val context: Context) {
     fun bypassAuthForDemo(profileId: String? = null) {
         if (profileId != null) {
             _activeProfileId.value = profileId
+        } else {
+            _activeProfileId.value = defaultProfiles[0].id
         }
         _isAuthenticated.value = true
     }
@@ -713,6 +744,70 @@ class StudyFluidRepository(private val context: Context) {
             Firebase.auth.signOut()
         } catch (_: Throwable) {}
         _isAuthenticated.value = false
+    }
+
+    // --- MODULE 2: STUDENT ONBOARDING SURVEY STORAGE (ROOM PERSISTENCE) ---
+    fun saveStudentSurvey(
+        profileId: String,
+        name: String,
+        gradeClass: Int,
+        board: String,
+        state: String,
+        city: String,
+        stream: String,
+        schoolName: String,
+        roadmapSummary: String,
+        recommendedChapters: List<String>,
+        dailyScheduleJson: String
+    ) {
+        _profiles.update { list ->
+            list.map { prof ->
+                if (prof.id == profileId) {
+                    prof.copy(
+                        name = name,
+                        cbseClass = gradeClass,
+                        board = board,
+                        state = state,
+                        city = city,
+                        stream = stream,
+                        schoolName = schoolName,
+                        studyRoadmapSummary = roadmapSummary,
+                        recommendedChapters = recommendedChapters,
+                        dailyScheduleJson = dailyScheduleJson,
+                        isOnboardingCompleted = true
+                    )
+                } else prof
+            }
+        }
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                studentProfileDao.updateOnboardingSurvey(
+                    id = profileId,
+                    name = name,
+                    board = board,
+                    state = state,
+                    city = city,
+                    grade = gradeClass,
+                    stream = stream,
+                    school = schoolName,
+                    roadmap = roadmapSummary,
+                    chapters = recommendedChapters.joinToString("||"),
+                    schedule = dailyScheduleJson
+                )
+            } catch (_: Throwable) {}
+        }
+    }
+
+    fun markOnboardingCompleted(profileId: String) {
+        _profiles.update { list ->
+            list.map { if (it.id == profileId) it.copy(isOnboardingCompleted = true) else it }
+        }
+        scope.launch(Dispatchers.IO) {
+            try {
+                studentProfileDao.markOnboardingCompleted(profileId)
+            } catch (_: Throwable) {}
+        }
     }
 
     // --- ROOM DATABASE LOCAL VAULT OPERATIONS ---
@@ -1092,7 +1187,13 @@ class StudyFluidRepository(private val context: Context) {
                 avatarColorHex = 0xFF6366F1,
                 studyStreakDays = 7,
                 knowledgePoints = 640,
-                bookmarkedChapterIds = setOf("cl10_sci_ch1", "cl10_sci_ch6")
+                bookmarkedChapterIds = setOf("cl10_sci_ch1", "cl10_sci_ch6"),
+                board = "CBSE",
+                state = "Delhi",
+                city = "New Delhi",
+                studyRoadmapSummary = "Class 10 CBSE Board Mastery: Chemical Reactions & Optics Sprint",
+                recommendedChapters = listOf("Chemical Reactions & Equations", "Light – Reflection & Refraction", "Life Processes", "Quadratic Equations"),
+                isOnboardingCompleted = true
             ),
             StudentProfile(
                 id = "prof_diya_cl7",
@@ -1105,7 +1206,13 @@ class StudyFluidRepository(private val context: Context) {
                 avatarColorHex = 0xFF06B6D4,
                 studyStreakDays = 4,
                 knowledgePoints = 320,
-                bookmarkedChapterIds = emptySet()
+                bookmarkedChapterIds = emptySet(),
+                board = "CBSE",
+                state = "Delhi",
+                city = "New Delhi",
+                studyRoadmapSummary = "Class 7 Foundations: Fractions, Light & Natural Resources",
+                recommendedChapters = listOf("Integers & Fractions", "Heat & Light", "Nutrition in Plants"),
+                isOnboardingCompleted = true
             )
         )
 

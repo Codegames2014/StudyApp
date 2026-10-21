@@ -6,14 +6,15 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [StudyVaultEntity::class, VaultItemEntity::class, MistakeEntity::class],
-    version = 3,
+    entities = [StudyVaultEntity::class, VaultItemEntity::class, MistakeEntity::class, StudentProfileEntity::class],
+    version = 4,
     exportSchema = false
 )
 abstract class StudyFluidRoomDatabase : RoomDatabase() {
 
     abstract fun studyVaultDao(): StudyVaultDao
     abstract fun mistakeDao(): MistakeDao
+    abstract fun studentProfileDao(): StudentProfileDao
 
     companion object {
         @Volatile

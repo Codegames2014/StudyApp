@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
@@ -390,16 +392,19 @@ fun FluidTutorScreen(
                 }
             }
 
-            // --- Input Dock ---
-            Surface(
-                color = LiquidSurface,
-                tonalElevation = 6.dp,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 76.dp)
+            // --- Floating Glass Input Bar ---
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 76.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(Color(0xD916161A)) // 85% opacity #16161A
+                    .border(1.dp, Color(0x1F6366F1), RoundedCornerShape(28.dp)) // 12% glowing border #6366F1
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
@@ -416,36 +421,37 @@ fun FluidTutorScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(2.dp))
 
                     OutlinedTextField(
                         value = inputText,
                         onValueChange = { inputText = it },
-                        placeholder = { Text("Ask doubt or CBSE question...", fontSize = 13.sp) },
+                        placeholder = { Text("Ask doubt or CBSE question...", fontSize = 12.sp, color = TextMuted) },
                         modifier = Modifier
                             .weight(1f)
                             .testTag("input_tutor_message"),
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(20.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = LiquidGlowIndigo,
-                            unfocusedBorderColor = LiquidCardBorder,
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
-                            focusedContainerColor = LiquidSurfaceElevated,
-                            unfocusedContainerColor = LiquidSurfaceElevated
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent
                         ),
                         maxLines = 3
                     )
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
 
                     IconButton(
                         onClick = {
+                            HapticHelper.triggerImpact(haptic)
                             sendMessage(inputText, attachedDiagram)
                         },
                         enabled = inputText.isNotBlank() || attachedDiagram != null,
                         modifier = Modifier
-                            .size(44.dp)
+                            .size(42.dp)
                             .clip(CircleShape)
                             .background(if (inputText.isNotBlank() || attachedDiagram != null) LiquidGlowIndigo else LiquidSurfaceElevated)
                             .testTag("btn_send_tutor_message")
@@ -454,7 +460,7 @@ fun FluidTutorScreen(
                             imageVector = Icons.AutoMirrored.Filled.Send,
                             contentDescription = "Send",
                             tint = if (inputText.isNotBlank() || attachedDiagram != null) Color.White else TextMuted,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -512,99 +518,143 @@ fun FluidTutorScreen(
 @Composable
 fun ChatMessageItem(message: ChatMessage) {
     val isUser = message.sender == MessageSender.USER
+    var isEntered by remember { mutableStateOf(false) }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+    LaunchedEffect(Unit) {
+        isEntered = true
+    }
+
+    AnimatedVisibility(
+        visible = isEntered,
+        enter = fadeIn(animationSpec = tween(220)) +
+                slideInVertically(
+                    initialOffsetY = { it / 4 },
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                ) +
+                scaleIn(
+                    initialScale = 0.92f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                )
     ) {
-        if (!isUser) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(LiquidGlowIndigo.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "🧘", fontSize = 16.sp)
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-
-        Column(
-            modifier = Modifier.widthIn(max = 300.dp),
-            horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
         ) {
-            // Attached diagram badge if any
-            if (message.attachedDiagramName != null) {
+            if (!isUser) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(LiquidGlowIndigo.copy(alpha = 0.3f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(LiquidGlowIndigo.copy(alpha = 0.2f))
+                        .border(1.dp, LiquidGlowIndigo.copy(alpha = 0.4f), CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "📐 ${message.attachedDiagramName}",
-                        fontSize = 11.sp,
-                        color = Color.White
+                    Text(text = "🧘", fontSize = 16.sp)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+
+            Column(
+                modifier = Modifier.widthIn(max = 300.dp),
+                horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
+            ) {
+                // Attached diagram badge if any
+                if (message.attachedDiagramName != null) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(LiquidGlowIndigo.copy(alpha = 0.3f))
+                            .border(1.dp, LiquidGlowCyan.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "📐 ${message.attachedDiagramName}",
+                            fontSize = 11.sp,
+                            color = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+
+                // Glassmorphic Message Bubble
+                val bubbleBg = if (isUser) {
+                    Brush.linearGradient(listOf(LiquidGlowIndigo, Color(0xFF4F46E5)))
+                } else {
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xD916161A), // 85% opacity #16161A
+                            Color(0xF0121216)
+                        )
                     )
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-
-            // Message Bubble
-            Box(
-                modifier = Modifier
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = 16.dp,
-                            topEnd = 16.dp,
-                            bottomStart = if (isUser) 16.dp else 4.dp,
-                            bottomEnd = if (isUser) 4.dp else 16.dp
-                        )
-                    )
-                    .background(if (isUser) LiquidGlowIndigo else LiquidSurfaceElevated)
-                    .border(
-                        1.dp,
-                        if (isUser) LiquidGlowIndigo else LiquidCardBorder,
-                        RoundedCornerShape(
-                            topStart = 16.dp,
-                            topEnd = 16.dp,
-                            bottomStart = if (isUser) 16.dp else 4.dp,
-                            bottomEnd = if (isUser) 4.dp else 16.dp
-                        )
-                    )
-                    .padding(14.dp)
-            ) {
-                Text(
-                    text = message.text,
-                    fontSize = 13.sp,
-                    color = if (isUser) Color.White else TextPrimary,
-                    lineHeight = 18.sp
+                val bubbleBorder = if (isUser) Color(0x336366F1) else Color(0x1F6366F1) // 12% #6366F1 glow border
+                val bubbleShape = RoundedCornerShape(
+                    topStart = 16.dp,
+                    topEnd = 16.dp,
+                    bottomStart = if (isUser) 16.dp else 4.dp,
+                    bottomEnd = if (isUser) 4.dp else 16.dp
                 )
-            }
 
-            // Citations
-            if (message.citationBadges.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    message.citationBadges.forEach { badge ->
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(LiquidSurfaceElevated)
-                                .border(1.dp, LiquidGlowCyan.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "🏷️ $badge",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = LiquidGlowCyan
-                            )
+                Box(
+                    modifier = Modifier
+                        .clip(bubbleShape)
+                        .background(bubbleBg)
+                        .border(1.dp, bubbleBorder, bubbleShape)
+                        .padding(14.dp)
+                ) {
+                    Text(
+                        text = message.text,
+                        fontSize = 13.sp,
+                        color = if (isUser) Color.White else TextPrimary,
+                        lineHeight = 19.sp
+                    )
+                }
+
+                // NCERT Citation Badges (e.g., "📖 NCERT Class 10 Science, Pg. 42")
+                if (message.citationBadges.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        message.citationBadges.forEach { badge ->
+                            val formattedBadge = if (badge.startsWith("📖") || badge.startsWith("🏷️")) badge else "📖 $badge"
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xD916161A))
+                                    .border(1.dp, LiquidGlowCyan.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 7.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = formattedBadge,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = LiquidGlowCyan
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
+}
+
+/**
+ * Module 3 Component: FluidTutorChatScreen
+ */
+@Composable
+fun FluidTutorChatScreen(
+    repository: StudyFluidRepository,
+    onNavigateToChapter: ((String) -> Unit)? = null
+) {
+    FluidTutorScreen(repository = repository, onNavigateToChapter = onNavigateToChapter)
 }

@@ -13,16 +13,16 @@ import kotlinx.coroutines.flow.Flow
 )
 data class MistakeEntity(
     @PrimaryKey
-    val id: String,
+    val id: String = "mistake_${System.currentTimeMillis()}",
     val studentProfileId: String,
-    val chapterId: String,
+    val chapterId: String = "",
     val subject: String, // "Physics", "Chemistry", "Biology", "Mathematics", "Social Science"
-    val topic: String,
+    val topic: String = "",
     val questionText: String,
-    val studentAnswer: String,
+    val studentAnswer: String = "",
     val correctAnswer: String,
     val explanation: String,
-    val mistakeCategory: String, // "Conceptual Gap", "Calculation Slip", "Formula Recall", "Question Misread"
+    val mistakeCategory: String = "Conceptual Gap", // "Conceptual Gap", "Calculation Slip", "Formula Recall", "Question Misread"
     val severityLevel: Int = 2, // 1 to 3
     val isMastered: Boolean = false,
     val reviewCount: Int = 0,
@@ -30,9 +30,42 @@ data class MistakeEntity(
     val createdAt: Long = System.currentTimeMillis(),
     val masteredAt: Long? = null,
     val chapter: String = chapterId,
+    val conceptTopic: String = topic,
+    val userWrongAnswer: String = studentAnswer,
     val timestamp: Long = createdAt,
     val errorCount: Int = 1
-)
+) {
+    constructor(
+        id: Long = 0L,
+        studentProfileId: String,
+        subject: String,
+        chapter: String,
+        conceptTopic: String,
+        questionText: String,
+        userWrongAnswer: String,
+        correctAnswer: String,
+        explanation: String,
+        timestamp: Long = System.currentTimeMillis(),
+        errorCount: Int = 1,
+        isMastered: Boolean = false
+    ) : this(
+        id = if (id == 0L) "mistake_${System.currentTimeMillis()}_${(1000..9999).random()}" else id.toString(),
+        studentProfileId = studentProfileId,
+        chapterId = chapter,
+        subject = subject,
+        topic = conceptTopic,
+        questionText = questionText,
+        studentAnswer = userWrongAnswer,
+        correctAnswer = correctAnswer,
+        explanation = explanation,
+        isMastered = isMastered,
+        chapter = chapter,
+        conceptTopic = conceptTopic,
+        userWrongAnswer = userWrongAnswer,
+        timestamp = timestamp,
+        errorCount = errorCount
+    )
+}
 
 data class SubjectErrorSummary(
     val subject: String,
@@ -64,6 +97,9 @@ interface MistakeDao {
 
     @Query("SELECT subject, SUM(errorCount) as totalErrors, SUM(CASE WHEN isMastered = 0 THEN 1 ELSE 0 END) as unmasteredCount FROM mistake_vault WHERE studentProfileId = :profileId GROUP BY subject")
     fun getSubjectWiseErrorAggregation(profileId: String): Flow<List<SubjectErrorSummary>>
+
+    @Query("SELECT subject, SUM(errorCount) as totalErrors, SUM(CASE WHEN isMastered = 0 THEN 1 ELSE 0 END) as unmasteredCount FROM mistake_vault WHERE studentProfileId = :profileId GROUP BY subject")
+    fun getSubjectErrorSummaries(profileId: String): Flow<List<SubjectErrorSummary>>
 
     @Query("SELECT chapter, subject, SUM(errorCount) as totalErrors, SUM(CASE WHEN isMastered = 0 THEN 1 ELSE 0 END) as unmasteredCount FROM mistake_vault WHERE studentProfileId = :profileId AND isMastered = 0 GROUP BY chapter, subject ORDER BY totalErrors DESC LIMIT 3")
     fun getTopWeakChapters(profileId: String): Flow<List<ChapterErrorSummary>>

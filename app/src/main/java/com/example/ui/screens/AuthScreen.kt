@@ -3,20 +3,17 @@ package com.example.ui.screens
 import android.app.Activity
 import android.util.Log
 import androidx.compose.animation.*
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -55,6 +52,16 @@ import com.google.firebase.auth.auth
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
+/**
+ * Module 1: Revised Authentication Screen
+ * Streamlined, uncluttered login screen strictly following Liquid Glass & Fluid Motion design.
+ * Features:
+ * - Header: StudyFluid logo & "CBSE NCERT Multi-Student Study Suite"
+ * - Glassmorphic email & password sign-in form with primary "Sign In to Student Vault" button
+ * - "OR CONNECT WITH" divider and Credential Manager "Sign in with Google" button
+ * - Prominent glowing glassmorphic "Demo" button for instant entry into demo student profile
+ * - STRICT UI REMOVALS: No sibling cards, no register tab toggle, no small text demo link
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthScreen(
@@ -66,56 +73,26 @@ fun AuthScreen(
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
 
-    val profiles by repository.profiles.collectAsState()
-
-    var isRegisterMode by remember { mutableStateOf(false) }
-
-    // Sign in fields
     var emailInput by remember { mutableStateOf("aarav.sharma24@gmail.com") }
     var passwordInput by remember { mutableStateOf("study123") }
     var isPasswordVisible by remember { mutableStateOf(false) }
 
-    // Register fields
-    var regName by remember { mutableStateOf("") }
-    var regEmail by remember { mutableStateOf("") }
-    var regPassword by remember { mutableStateOf("") }
-    var regClass by remember { mutableIntStateOf(10) }
-    var regStream by remember { mutableStateOf("Science (PCM)") }
-    var regSchool by remember { mutableStateOf("") }
-
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isGoogleLoading by remember { mutableStateOf(false) }
-
-    val streams = listOf("Science (PCM)", "Science (PCB)", "Commerce", "Humanities", "General Foundation")
+    var isSigningIn by remember { mutableStateOf(false) }
 
     fun triggerEmailAuth() {
         HapticHelper.triggerImpact(haptic)
         errorMessage = null
-        if (isRegisterMode) {
-            val result = repository.registerStudentWithEmailPassword(
-                name = regName,
-                email = regEmail,
-                pass = regPassword,
-                cbseClass = regClass,
-                stream = regStream,
-                schoolName = regSchool,
-                avatarEmoji = "🎓",
-                colorHex = 0xFF6366F1
-            )
-            result.onSuccess {
-                onAuthSuccess()
-            }.onFailure { e ->
-                errorMessage = e.message ?: "Registration failed"
-                HapticHelper.triggerImpact(haptic)
-            }
-        } else {
-            val result = repository.authenticateWithEmailPassword(emailInput, passwordInput)
-            result.onSuccess {
-                onAuthSuccess()
-            }.onFailure { e ->
-                errorMessage = e.message ?: "Authentication failed"
-                HapticHelper.triggerImpact(haptic)
-            }
+        isSigningIn = true
+
+        val result = repository.authenticateWithEmailPassword(emailInput, passwordInput)
+        isSigningIn = false
+        result.onSuccess {
+            onAuthSuccess()
+        }.onFailure { e ->
+            errorMessage = e.message ?: "Authentication failed. Please verify credentials."
+            HapticHelper.triggerImpact(haptic)
         }
     }
 
@@ -157,7 +134,7 @@ fun AuthScreen(
                     isGoogleLoading = false
                 }
             } catch (e: GetCredentialCancellationException) {
-                Log.w("Auth", "Google Sign-In flow cancelled or dismissed: ${e.message}", e)
+                Log.w("Auth", "Google Sign-In flow cancelled: ${e.message}")
                 isGoogleLoading = false
             } catch (e: Exception) {
                 Log.e("Auth", "Google Sign-In failed", e)
@@ -188,159 +165,53 @@ fun AuthScreen(
                 .fillMaxSize()
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            contentPadding = PaddingValues(top = 28.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(top = 36.dp, bottom = 36.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Header with Logo
+            // 1. Header: StudyFluid Branding Logo & Subtitle
             item {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
                     Box(
                         modifier = Modifier
-                            .size(76.dp)
+                            .size(80.dp)
                             .clip(CircleShape)
                             .background(
                                 Brush.linearGradient(
                                     listOf(LiquidGlowIndigo, LiquidGlowCyan)
                                 )
                             )
-                            .border(2.dp, Color.White.copy(alpha = 0.3f), CircleShape),
+                            .border(2.dp, Color.White.copy(alpha = 0.35f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = "🌊", fontSize = 38.sp)
+                        Text(text = "🌊", fontSize = 42.sp)
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
                         text = "StudyFluid",
-                        fontSize = 28.sp,
+                        fontSize = 30.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = TextPrimary
+                        color = TextPrimary,
+                        letterSpacing = 0.5.sp
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
                         text = "CBSE NCERT Multi-Student Study Suite",
                         fontSize = 13.sp,
                         color = LiquidGlowCyan,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
 
-            // Authentication Mode Switcher (Sign In vs Register)
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(LiquidSurfaceElevated)
-                        .padding(4.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (!isRegisterMode) LiquidGlowIndigo else Color.Transparent)
-                            .clickable {
-                                HapticHelper.triggerSelection(haptic)
-                                isRegisterMode = false
-                                errorMessage = null
-                            }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Student Sign In",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (!isRegisterMode) Color.White else TextMuted
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (isRegisterMode) LiquidGlowIndigo else Color.Transparent)
-                            .clickable {
-                                HapticHelper.triggerSelection(haptic)
-                                isRegisterMode = true
-                                errorMessage = null
-                            }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Register Sibling / Profile",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isRegisterMode) Color.White else TextMuted
-                        )
-                    }
-                }
-            }
-
-            // Quick Student Profile Chips (when in sign in mode)
-            if (!isRegisterMode && profiles.isNotEmpty()) {
-                item {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.Start
-                    ) {
-                        Text(
-                            text = "Quick Account Select:",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextSecondary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            items(profiles) { profile ->
-                                val isSelected = emailInput.equals(profile.email, ignoreCase = true)
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(if (isSelected) LiquidSurfaceElevated else LiquidSurfaceGlass)
-                                        .border(
-                                            width = if (isSelected) 1.5.dp else 1.dp,
-                                            color = if (isSelected) Color(profile.avatarColorHex) else LiquidCardBorder,
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
-                                        .clickable {
-                                            HapticHelper.triggerSelection(haptic)
-                                            emailInput = profile.email
-                                            passwordInput = profile.password
-                                        }
-                                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                                        .testTag("quick_profile_${profile.id}")
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(text = profile.avatarEmoji, fontSize = 16.sp)
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Column {
-                                            Text(
-                                                text = profile.name,
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = TextPrimary
-                                            )
-                                            Text(
-                                                text = "Class ${profile.cbseClass}",
-                                                fontSize = 10.sp,
-                                                color = Color(profile.avatarColorHex)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Form Fields Card
+            // 2. Core Sign-In Section inside Glassmorphic Container
             item {
                 GlassCard(
                     modifier = Modifier
@@ -351,283 +222,162 @@ fun AuthScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        if (!isRegisterMode) {
-                            // Sign In Mode
-                            OutlinedTextField(
-                                value = emailInput,
-                                onValueChange = { emailInput = it },
-                                label = { Text("Student Email") },
-                                placeholder = { Text("e.g. aarav.sharma24@gmail.com") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Email, contentDescription = null, tint = LiquidGlowCyan)
-                                },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Email,
-                                    imeAction = ImeAction.Next
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("input_auth_email"),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = LiquidGlowIndigo,
-                                    unfocusedBorderColor = LiquidCardBorder,
-                                    focusedTextColor = TextPrimary,
-                                    unfocusedTextColor = TextPrimary
-                                )
-                            )
+                        Text(
+                            text = "Student Sign In",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
 
-                            OutlinedTextField(
-                                value = passwordInput,
-                                onValueChange = { passwordInput = it },
-                                label = { Text("Password") },
-                                placeholder = { Text("Enter student password") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Lock, contentDescription = null, tint = LiquidGlowCyan)
-                                },
-                                trailingIcon = {
-                                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                                        Icon(
-                                            imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                            contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
-                                            tint = TextSecondary
-                                        )
-                                    }
-                                },
-                                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Password,
-                                    imeAction = ImeAction.Done
-                                ),
-                                keyboardActions = KeyboardActions(
-                                    onDone = {
-                                        focusManager.clearFocus()
-                                        triggerEmailAuth()
-                                    }
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("input_auth_password"),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = LiquidGlowIndigo,
-                                    unfocusedBorderColor = LiquidCardBorder,
-                                    focusedTextColor = TextPrimary,
-                                    unfocusedTextColor = TextPrimary
-                                )
-                            )
-                        } else {
-                            // Register Mode
-                            OutlinedTextField(
-                                value = regName,
-                                onValueChange = { regName = it },
-                                label = { Text("Student Full Name") },
-                                placeholder = { Text("e.g. Diya Sharma") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Person, contentDescription = null, tint = LiquidGlowCyan)
-                                },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("input_reg_name"),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = LiquidGlowIndigo,
-                                    unfocusedBorderColor = LiquidCardBorder,
-                                    focusedTextColor = TextPrimary,
-                                    unfocusedTextColor = TextPrimary
-                                )
-                            )
+                        OutlinedTextField(
+                            value = emailInput,
+                            onValueChange = {
+                                emailInput = it
+                                errorMessage = null
+                            },
+                            label = { Text("Student Email") },
+                            placeholder = { Text("aarav.sharma24@gmail.com") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Email, contentDescription = null, tint = LiquidGlowCyan)
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Next
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("input_auth_email"),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = LiquidGlowIndigo,
+                                unfocusedBorderColor = LiquidCardBorder,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary,
+                                focusedLabelColor = LiquidGlowCyan,
+                                unfocusedLabelColor = TextSecondary
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
 
-                            OutlinedTextField(
-                                value = regEmail,
-                                onValueChange = { regEmail = it },
-                                label = { Text("Student / Parent Email") },
-                                placeholder = { Text("e.g. diya.sharma@gmail.com") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Email, contentDescription = null, tint = LiquidGlowCyan)
-                                },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Email,
-                                    imeAction = ImeAction.Next
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("input_reg_email"),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = LiquidGlowIndigo,
-                                    unfocusedBorderColor = LiquidCardBorder,
-                                    focusedTextColor = TextPrimary,
-                                    unfocusedTextColor = TextPrimary
-                                )
-                            )
-
-                            OutlinedTextField(
-                                value = regPassword,
-                                onValueChange = { regPassword = it },
-                                label = { Text("Create Password (min 4 chars)") },
-                                placeholder = { Text("e.g. diya123") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Lock, contentDescription = null, tint = LiquidGlowCyan)
-                                },
-                                singleLine = true,
-                                visualTransformation = PasswordVisualTransformation(),
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Password,
-                                    imeAction = ImeAction.Next
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("input_reg_password"),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = LiquidGlowIndigo,
-                                    unfocusedBorderColor = LiquidCardBorder,
-                                    focusedTextColor = TextPrimary,
-                                    unfocusedTextColor = TextPrimary
-                                )
-                            )
-
-                            Column {
-                                Text(
-                                    text = "Select CBSE Class (1 - 12)",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = TextSecondary
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    items((1..12).toList()) { cls ->
-                                        val isSel = cls == regClass
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(if (isSel) LiquidGlowIndigo else LiquidSurfaceElevated)
-                                                .clickable {
-                                                    HapticHelper.triggerSelection(haptic)
-                                                    regClass = cls
-                                                }
-                                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                                        ) {
-                                            Text(
-                                                text = "Cl. $cls",
-                                                fontSize = 11.sp,
-                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (isSel) Color.White else TextSecondary
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (regClass >= 11) {
-                                Column {
-                                    Text(
-                                        text = "Class 11/12 Academic Stream",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = TextSecondary
+                        OutlinedTextField(
+                            value = passwordInput,
+                            onValueChange = {
+                                passwordInput = it
+                                errorMessage = null
+                            },
+                            label = { Text("Password") },
+                            placeholder = { Text("Enter password") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Lock, contentDescription = null, tint = LiquidGlowCyan)
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                    Icon(
+                                        imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
+                                        tint = TextSecondary
                                     )
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        items(streams) { stm ->
-                                            val isSel = stm == regStream
-                                            Box(
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(8.dp))
-                                                    .background(if (isSel) LiquidGlowCyan else LiquidSurfaceElevated)
-                                                    .clickable {
-                                                        HapticHelper.triggerSelection(haptic)
-                                                        regStream = stm
-                                                    }
-                                                    .padding(horizontal = 10.dp, vertical = 6.dp)
-                                            ) {
-                                                Text(
-                                                    text = stm,
-                                                    fontSize = 11.sp,
-                                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
-                                                    color = if (isSel) Color.Black else TextSecondary
-                                                )
-                                            }
-                                        }
-                                    }
                                 }
-                            }
-
-                            OutlinedTextField(
-                                value = regSchool,
-                                onValueChange = { regSchool = it },
-                                label = { Text("School Name") },
-                                placeholder = { Text("e.g. Modern School") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.School, contentDescription = null, tint = LiquidGlowCyan)
-                                },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                keyboardActions = KeyboardActions(
-                                    onDone = {
-                                        focusManager.clearFocus()
-                                        triggerEmailAuth()
-                                    }
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("input_reg_school"),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = LiquidGlowIndigo,
-                                    unfocusedBorderColor = LiquidCardBorder,
-                                    focusedTextColor = TextPrimary,
-                                    unfocusedTextColor = TextPrimary
-                                )
-                            )
-                        }
+                            },
+                            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    focusManager.clearFocus()
+                                    triggerEmailAuth()
+                                }
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("input_auth_password"),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = LiquidGlowIndigo,
+                                unfocusedBorderColor = LiquidCardBorder,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary,
+                                focusedLabelColor = LiquidGlowCyan,
+                                unfocusedLabelColor = TextSecondary
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
 
                         if (errorMessage != null) {
-                            Text(
-                                text = errorMessage!!,
-                                color = LiquidGlowRose,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(top = 2.dp)
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(LiquidGlowRose.copy(alpha = 0.15f))
+                                    .border(1.dp, LiquidGlowRose.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ErrorOutline,
+                                    contentDescription = null,
+                                    tint = LiquidGlowRose,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = errorMessage!!,
+                                    color = LiquidGlowRose,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                         }
 
-                        // Submit Button
+                        // Primary Sign-In Button
                         Button(
                             onClick = { triggerEmailAuth() },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(50.dp)
-                                .testTag(if (isRegisterMode) "btn_reg_submit" else "btn_auth_submit"),
+                                .testTag("btn_auth_submit"),
                             shape = RoundedCornerShape(12.dp),
+                            enabled = !isSigningIn,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = LiquidGlowIndigo,
                                 contentColor = Color.White
                             )
                         ) {
-                            Icon(
-                                imageVector = if (isRegisterMode) Icons.Default.PersonAdd else Icons.Default.Login,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isRegisterMode) "Create Student Profile" else "Sign In to Student Vault",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            if (isSigningIn) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Login,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Sign In to Student Vault",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            // Divider / Or
+            // Divider: OR CONNECT WITH
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     HorizontalDivider(modifier = Modifier.weight(1f), color = LiquidCardBorder)
@@ -635,13 +385,14 @@ fun AuthScreen(
                         text = "  OR CONNECT WITH  ",
                         fontSize = 11.sp,
                         color = TextMuted,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 0.8.sp
                     )
                     HorizontalDivider(modifier = Modifier.weight(1f), color = LiquidCardBorder)
                 }
             }
 
-            // Google Sign-In with Credential Manager
+            // Google Sign-In Button
             item {
                 Button(
                     onClick = { handleGoogleSignIn() },
@@ -675,22 +426,109 @@ fun AuthScreen(
                 }
             }
 
-            // Quick Demo Explore Button
+            // 3. Dedicated Demo Button: Prominent, Glowing Glassmorphic Card
             item {
-                TextButton(
-                    onClick = {
-                        HapticHelper.triggerSelection(haptic)
-                        repository.bypassAuthForDemo()
-                        onAuthSuccess()
-                    },
-                    modifier = Modifier.testTag("btn_guest_launch")
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    Color(0xD916161A), // #16161A with 85% opacity
+                                    Color(0xF01A1829)
+                                )
+                            )
+                        )
+                        .border(
+                            width = 1.5.dp,
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    LiquidGlowIndigo,
+                                    LiquidGlowCyan,
+                                    LiquidGlowIndigo
+                                )
+                            ),
+                            shape = RoundedCornerShape(14.dp)
+                        )
+                        .clickable {
+                            HapticHelper.triggerImpact(haptic)
+                            repository.bypassAuthForDemo()
+                            onAuthSuccess()
+                        }
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                        .testTag("btn_demo_vault")
                 ) {
-                    Text(
-                        text = "⚡ Instant Demo: Continue as Aarav (Class 10)",
-                        color = LiquidGlowCyan,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(
+                                                LiquidGlowIndigo.copy(alpha = 0.35f),
+                                                LiquidGlowCyan.copy(alpha = 0.25f)
+                                            )
+                                        )
+                                    )
+                                    .border(1.dp, LiquidGlowCyan.copy(alpha = 0.6f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(text = "⚡", fontSize = 20.sp)
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Demo",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = TextPrimary
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(LiquidGlowIndigo.copy(alpha = 0.3f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "INSTANT ACCESS",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = LiquidGlowCyan
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(2.dp))
+
+                                Text(
+                                    text = "Explore pre-configured CBSE Class 10 student vault",
+                                    fontSize = 11.sp,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+
+                        Icon(
+                            imageVector = Icons.Default.ArrowForward,
+                            contentDescription = "Enter Demo",
+                            tint = LiquidGlowCyan,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
